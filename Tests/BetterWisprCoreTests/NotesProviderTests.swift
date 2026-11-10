@@ -567,3 +567,25 @@ private final class NotesEndpointStub: URLProtocol, @unchecked Sendable {
     applied = general.applyingNotesOptions(of: meeting)
     #expect(applied.notesInstructions == "Name every customer." && applied.notesInstructionsMode == .replace)
 }
+
+@Test func notesPromptCarriesTheVocabularyAsASpellingReferenceUnlessTurnedOff() throws {
+    let vocabulary = [
+        VocabularyEntry(phrase: "Hi-pack Advisor", replacement: "Hypact Advisor"),
+        VocabularyEntry(phrase: "Ipac Advisor", replacement: "Hypact Advisor"),
+        VocabularyEntry(phrase: "Supabase", replacement: ""),
+        VocabularyEntry(phrase: "Kocia Mark", replacement: "question mark"),
+    ]
+    let reference = try #require(MeetingNotesGenerator.vocabularyReference(vocabulary, limit: 8_000))
+    #expect(reference.contains("Terms: Hypact Advisor, Supabase\n"))
+    #expect(reference.contains("\"Hi-pack Advisor\" → Hypact Advisor; \"Ipac Advisor\" → Hypact Advisor"))
+    #expect(!reference.contains("question mark"))
+
+    let many = (1...200).map { VocabularyEntry(phrase: "Term\($0)", replacement: "") }
+    #expect(try #require(MeetingNotesGenerator.vocabularyReference(many, limit: 1_000)).count <= 1_000)
+    #expect(MeetingNotesGenerator.vocabularyReference([], limit: 1_000) == nil)
+
+    var settings = AppSettings()
+    #expect(MeetingNotesGenerator.instructions(settings, meetingLanguage: "nl", vocabulary: vocabulary).contains("Hypact Advisor"))
+    settings.notesUseVocabulary = false
+    #expect(!MeetingNotesGenerator.instructions(settings, meetingLanguage: "nl", vocabulary: vocabulary).contains("Hypact Advisor"))
+}

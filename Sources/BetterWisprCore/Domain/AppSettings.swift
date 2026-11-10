@@ -168,6 +168,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var notesLanguage: String?
     public var notesInstructions: String = ""
     public var notesInstructionsMode: NotesInstructionsMode = .append
+    /// Sends the vocabulary along with meeting notes, so the model spells those terms right.
+    public var notesUseVocabulary: Bool = true
     /// The newest onboarding the user finished or skipped; 0 shows it again.
     public var completedOnboardingVersion: Int = 0
     /// The onboarding page to resume after quitting midway.
@@ -303,6 +305,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         notesLanguage = try? container.decodeIfPresent(String.self, forKey: .notesLanguage)
         notesInstructions = (try? container.decodeIfPresent(String.self, forKey: .notesInstructions)) ?? ""
         notesInstructionsMode = (try? container.decodeIfPresent(NotesInstructionsMode.self, forKey: .notesInstructionsMode)) ?? .append
+        notesUseVocabulary = (try? container.decodeIfPresent(Bool.self, forKey: .notesUseVocabulary)) ?? true
         completedOnboardingVersion = try container.decodeIfPresent(Int.self, forKey: .completedOnboardingVersion) ?? 0
         onboardingStep = try container.decodeIfPresent(Int.self, forKey: .onboardingStep) ?? 0
     }

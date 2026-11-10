@@ -95,6 +95,7 @@ A new certificate means granting Accessibility to `BetterWispr Dev` once more.
 | Light cleanup also drops Dutch filled pauses (`eh`, `ehm`, `euh`), never the word `er`                                   | `TranscriptCleaner.dutchFillers`     | Possible PR |
 | Notes language picker and own notes instructions (add to or replace the built-in prompt)                                 | Models → Meeting notes · Language and prompt | Possible PR (upstream issue #75) |
 | Per-meeting notes language and instructions, laid over the ones from Models                                              | Notetaker → Summary → Notes options  | Possible PR |
+| Vocabulary sent with meeting notes as a spelling reference (terms plus known mishearings; capped for small models)       | `MeetingNotesGenerator.vocabularyReference` | Possible PR |
 
 ## Known limits of the upstream app
 

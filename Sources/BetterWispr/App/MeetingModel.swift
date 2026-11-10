@@ -55,6 +55,8 @@ final class MeetingModel {
     var microphone: AudioInputDevice?
     var showsCallAudioHint = false
     var notesSettings = AppSettings()
+    /// Reads the vocabulary at generation time, so Update summary uses the latest entries.
+    @ObservationIgnored var currentVocabulary: @MainActor () -> [VocabularyEntry] = { [] }
     var ollamaModels: [String] = []
     var builtInModelInstalled = false
     var remembersVoices = false {
@@ -386,7 +388,7 @@ final class MeetingModel {
         let sourceFingerprint = meeting.summarySourceFingerprint
         let modelName = notesSettings.notesModelName
         do {
-            let notes = try await MeetingNotesGenerator.generate(segments: meeting.segments, names: meeting.participantNames, userNotes: meeting.notes, invite: meeting.calendarInvite, language: meeting.language, settings: notesSettings.applyingNotesOptions(of: meeting)) { [weak self] step, total in
+            let notes = try await MeetingNotesGenerator.generate(segments: meeting.segments, names: meeting.participantNames, userNotes: meeting.notes, invite: meeting.calendarInvite, language: meeting.language, vocabulary: currentVocabulary(), settings: notesSettings.applyingNotesOptions(of: meeting)) { [weak self] step, total in
                 guard let self, self.owns(run) else { return }
                 run.generationStep = (step, total)
             }

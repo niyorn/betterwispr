@@ -301,6 +301,7 @@ final class AppModel {
         if !models.contains(where: { $0.id == settings.selectedModelID }) { settings.selectedModelID = "apple" }
         settings.launchAtLogin = SMAppService.mainApp.status == .enabled
         meetings.notesSettings = settings
+        meetings.currentVocabulary = { [weak self] in self?.vocabulary ?? [] }
         meetings.remembersVoices = settings.rememberVoices
         for cli in Set([settings.notesCLI, settings.askSettings.notesCLI, settings.cleanupSettings.notesCLI].compactMap { $0 }) { Task { await refreshNotesCLIModels(cli) } }
         refreshModels()

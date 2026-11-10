@@ -26,6 +26,10 @@ struct NotesPromptSettings: View {
             Button("Clear") { draft = "" }
         }
         Text(caption).font(.caption).foregroundStyle(.secondary)
+        Toggle(isOn: setting(\.notesUseVocabulary)) {
+            Text("Use my vocabulary as a spelling reference")
+            Text("Sends your vocabulary terms and known mishearings with the meeting text, so names and jargon come out spelled right. The model only uses a term where the meeting clearly said it.")
+        }
         Color.clear.frame(height: 0)
             .onAppear { draft = model.settings.notesInstructions }
             // Saving also re-applies the Dock, shortcut and login item, so wait until typing pauses.

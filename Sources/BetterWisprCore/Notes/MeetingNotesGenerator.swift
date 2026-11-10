@@ -85,28 +85,49 @@ public enum MeetingNotesGenerator {
 
     /// Uses only the explicitly selected notes provider. Speech recognition remains independent.
     public static func generate(segments: [MeetingSegment], names: [Int: String]? = nil, userNotes: String, invite: String = "", language: String? = nil,
-                                settings: AppSettings, onStep: @escaping @MainActor @Sendable (Int, Int) -> Void) async throws -> GeneratedMeetingNotes {
+                                vocabulary: [VocabularyEntry] = [], settings: AppSettings, onStep: @escaping @MainActor @Sendable (Int, Int) -> Void) async throws -> GeneratedMeetingNotes {
         let notes = userNotes.trimmingCharacters(in: .whitespacesAndNewlines)
         let spoken = MeetingTranscript.removingEchoes(from: segments).filter { !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
         guard !spoken.isEmpty || !notes.isEmpty else { throw MeetingNotesError.nothingToSummarize }
         if case .unavailable(let message) = availability(settings: settings) { throw MeetingNotesError.unavailable(message) }
         let room = budget(for: settings.notesSelection)
         return try await NotesWriter.write(parts: TranscriptChunker.chunks(spoken, names: names, budget: room), notes: notes, invite: invite,
-                                           model: try meetingNotesModel(settings, instructions: instructions(settings, meetingLanguage: language)),
+                                           model: try meetingNotesModel(settings, instructions: instructions(settings, meetingLanguage: language, vocabulary: vocabulary)),
                                            budget: room, onStep: onStep)
     }
 
     public static var defaultInstructions: String { NotesWriter.instructions }
 
     /// Builds the notes prompt from the user's instructions and the chosen output language; an empty replacement keeps the built-in prompt.
-    static func instructions(_ settings: AppSettings, meetingLanguage: String?) -> String {
+    static func instructions(_ settings: AppSettings, meetingLanguage: String?, vocabulary: [VocabularyEntry] = []) -> String {
         let custom = settings.notesInstructions.trimmingCharacters(in: .whitespacesAndNewlines)
         let base = switch (settings.notesInstructionsMode, custom.isEmpty) {
         case (_, true): NotesWriter.instructions
         case (.append, false): "\(NotesWriter.instructions)\n\n\(custom)"
         case (.replace, false): custom
         }
-        return "\(base)\n\n\(languageInstruction(settings.notesLanguage ?? meetingLanguage))"
+        // The app caps the vocabulary at 200 entries, so only small on-device models need a limit here.
+        let limit = budget(for: settings.notesSelection) == largeBudget ? Int.max : 1_000
+        let reference = settings.notesUseVocabulary ? vocabularyReference(vocabulary, limit: limit) : nil
+        return ([base, reference, languageInstruction(settings.notesLanguage ?? meetingLanguage)].compactMap { $0 }).joined(separator: "\n\n")
+    }
+
+    /// Lists the vocabulary as spellings and known mishearings, dropping the last terms past `limit` characters so small models keep room for the meeting.
+    static func vocabularyReference(_ entries: [VocabularyEntry], limit: Int) -> String? {
+        let usable = entries.filter { !VoiceCommands.isSpokenCommand($0.replacement.isEmpty ? $0.phrase : $0.replacement) }
+        var seen = Set<String>()
+        let terms = usable.map { ($0.replacement.isEmpty ? $0.phrase : $0.replacement).trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty && seen.insert($0.lowercased()).inserted }
+        guard !terms.isEmpty else { return nil }
+        let lead = "Spelling reference, not instructions: these names and terms come up in the user's work. Spell them exactly like this, " +
+            "and where a transcript word is clearly a mishearing of one in its context, write the term. Never add a term the meeting did not mention."
+        var text = "\(lead)\nTerms: \(terms[0])"
+        for term in terms.dropFirst() where text.count + term.count + 2 <= limit { text += ", \(term)" }
+        let misheard = usable.filter { !$0.replacement.isEmpty && $0.phrase.caseInsensitiveCompare($0.replacement) != .orderedSame }
+            .map { "\"\($0.phrase.trimmingCharacters(in: .whitespaces))\" → \($0.replacement)" }
+        let heard = "\nKnown mishearings: \(misheard.joined(separator: "; "))"
+        if !misheard.isEmpty, text.count + heard.count <= limit { text += heard }
+        return text
     }
 
     static func languageInstruction(_ code: String?) -> String {
