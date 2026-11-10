@@ -70,8 +70,21 @@ final class APINotesModel: NotesLanguageModel {
             "messages": [["role": "system", "content": instructions], ["role": "user", "content": prompt]],
         ]
         if json { body["response_format"] = ["type": "json_object"] }
-        if lowLatency { body.merge(Self.lowLatencyFields(host: try connection.validatedURL().host(), model: connection.modelID)) { $1 } }
+        let host = try connection.validatedURL().host()
+        if lowLatency { body.merge(Self.lowLatencyFields(host: host, model: connection.modelID)) { $1 } }
+        body.merge(Self.providerFields(host: host, model: connection.modelID)) { $1 }
         return body
+    }
+
+    /// Mirrors Waan's `src/config/models.js`, whose `npm run check:cache` runs set this provider order.
+    static let openRouterProviders: [String: [String]] = [
+        "deepseek/deepseek-v4.1-flash-1017": ["mistral/fp8", "parasail/fp8", "novita", "siliconflow", "fireworks"],
+    ]
+
+    /// Replaces the low-latency `sort` for a listed model, so the same provider keeps serving and its prompt cache gets reused.
+    static func providerFields(host: String?, model: String) -> [String: Any] {
+        guard host?.lowercased() == "openrouter.ai", let order = openRouterProviders[model] else { return [:] }
+        return ["provider": ["order": order, "allow_fallbacks": true]]
     }
 
     static let openAINoReasoningModels: Set<String> = [

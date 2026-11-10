@@ -24,6 +24,26 @@ import Testing
     }
 }
 
+@Test func listedOpenRouterModelsPinTheirProviderOrderEvenOnLowLatencyRequests() throws {
+    var connection = SpeechConnection(api: .openAICompatible)
+    connection.endpoint = "https://openrouter.ai/api/v1/chat/completions"
+    connection.modelID = "deepseek/deepseek-v4.1-flash-1017"
+    let expected: [String: Any] = ["order": APINotesModel.openRouterProviders[connection.modelID] as Any, "allow_fallbacks": true]
+    for lowLatency in [false, true] {
+        let body = try APINotesModel(connection: connection, lowLatency: lowLatency).requestBody("hello", json: false)
+        let provider = try #require(body["provider"] as? [String: Any])
+        #expect(NSDictionary(dictionary: provider).isEqual(to: expected), "lowLatency: \(lowLatency)")
+    }
+
+    connection.modelID = "anthropic/claude-haiku"
+    let unlisted = try APINotesModel(connection: connection, lowLatency: true).requestBody("hello", json: false)
+    #expect((unlisted["provider"] as? [String: Any])?["sort"] as? String == "throughput")
+
+    connection.endpoint = "https://api.deepseek.com/v1/chat/completions"
+    connection.modelID = "deepseek/deepseek-v4.1-flash-1017"
+    #expect(try APINotesModel(connection: connection).requestBody("hello", json: false)["provider"] == nil)
+}
+
 @Test func onlyLowLatencyRequestsCarryReasoningFields() throws {
     var connection = SpeechConnection(api: .openAICompatible)
     connection.endpoint = "https://api.openai.com/v1/chat/completions"
