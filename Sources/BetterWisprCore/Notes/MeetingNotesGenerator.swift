@@ -33,6 +33,17 @@ public enum MeetingNotesGenerator {
     // ponytail: characters at ~4 per token; switch to SystemLanguageModel.tokenCount(for:) once the minimum OS reaches 26.4.
     static let budget = 6000
 
+    /// Fits a meeting of a few hours in one request, for models with a large context window.
+    static let largeBudget = 200_000
+
+    /// Keeps the small budget for on-device models, whose context window is a few thousand tokens.
+    static func budget(for selection: NotesModelSelection) -> Int {
+        switch selection {
+        case .connection, .cli: largeBudget
+        case .apple, .builtIn, .ollama: budget
+        }
+    }
+
     public static func availability(settings: AppSettings) -> NotesAvailability {
         switch settings.notesSelection {
         case .apple: return appleAvailability
@@ -58,8 +69,9 @@ public enum MeetingNotesGenerator {
         let spoken = MeetingTranscript.removingEchoes(from: segments).filter { !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
         guard !spoken.isEmpty || !notes.isEmpty else { throw MeetingNotesError.nothingToSummarize }
         if case .unavailable(let message) = availability(settings: settings) { throw MeetingNotesError.unavailable(message) }
-        return try await NotesWriter.write(parts: TranscriptChunker.chunks(spoken, names: names, budget: budget), notes: notes, invite: invite,
-                                           model: try meetingNotesModel(settings), onStep: onStep)
+        let room = budget(for: settings.notesSelection)
+        return try await NotesWriter.write(parts: TranscriptChunker.chunks(spoken, names: names, budget: room), notes: notes, invite: invite,
+                                           model: try meetingNotesModel(settings), budget: room, onStep: onStep)
     }
 
     private static var appleAvailability: NotesAvailability {
@@ -320,8 +332,8 @@ enum NotesWriter {
         """
 
     static func write(parts: [String], notes: String, invite: String = "", model: any NotesLanguageModel,
+                      budget: Int = MeetingNotesGenerator.budget,
                       onStep: @escaping @MainActor @Sendable (Int, Int) -> Void) async throws -> GeneratedMeetingNotes {
-        let budget = MeetingNotesGenerator.budget
         let personal = notes.isEmpty ? [] : TranscriptChunker.chunks(of: notes, budget: budget - 64).map { "Me's own notes:\n\($0)" }
         var material = (parts + personal).joined(separator: "\n")
         let parts = material.count <= budget ? [material] : parts + personal

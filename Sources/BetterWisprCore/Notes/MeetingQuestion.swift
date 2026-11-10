@@ -44,7 +44,7 @@ public enum MeetingQuestion {
     public static func ask(_ question: String, about meetings: [Meeting], settings: AppSettings) async throws -> MeetingAnswer {
         if case .unavailable(let message) = MeetingNotesGenerator.availability(settings: settings) { throw MeetingNotesError.unavailable(message) }
         return try await ask(question, about: meetings, model: try MeetingNotesGenerator.languageModel(settings, instructions: instructions),
-                             modelName: settings.notesModelName)
+                             modelName: settings.notesModelName, budget: MeetingNotesGenerator.budget(for: settings.notesSelection))
     }
 
     static func ask(_ question: String, about meetings: [Meeting], model: any NotesLanguageModel, modelName: String,
