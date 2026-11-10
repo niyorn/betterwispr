@@ -48,9 +48,10 @@ The full Xcode is required, not just the Command Line Tools: Apple Intelligence 
 | `SUEnableAutomaticChecks` | default                   | `false`, so Sparkle never swaps in the official release |
 
 Every data path goes through `AppPaths.support`, which reads `BetterWisprDataFolder`.
-`~/Library/Application Support/BetterWispr Dev/Models` is a symlink to the official app's
-`Models`, so models are downloaded once. Settings, history, vocabulary and meetings are the
-Dev app's own. Its shortcut is `⌃⌥⇧⌘ D`; the official app keeps `⌃⌥⇧⌘ Space`. Two apps on
+The models live in `~/Library/Application Support/BetterWispr Dev/Models`; the official app's
+`BetterWispr/Models` is a symlink to it, so models are downloaded once and deleting the official
+app with its folder leaves the Dev app untouched. Settings, history, vocabulary and meetings are
+the Dev app's own. Its shortcut is `⌃⌥⇧⌘ D`; the official app keeps `⌃⌥⇧⌘ Space`. Two apps on
 the same shortcut fail silently, because the second hot-key registration is refused.
 
 Never use `make run` or `make dev`: they `pkill -x BetterWispr`, which kills both apps.
