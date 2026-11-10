@@ -94,6 +94,7 @@ A new certificate means granting Accessibility to `BetterWispr Dev` once more.
 | Parakeet phrase booster also for Dutch, spell-checked in Dutch and English                                               | `ParakeetProvider.boostedLanguages`  | Possible PR, after real-voice testing |
 | Light cleanup also drops Dutch filled pauses (`eh`, `ehm`, `euh`), never the word `er`                                   | `TranscriptCleaner.dutchFillers`     | Possible PR |
 | Notes language picker and own notes instructions (add to or replace the built-in prompt)                                 | Models → Meeting notes · Language and prompt | Possible PR (upstream issue #75) |
+| Per-meeting notes language and instructions, laid over the ones from Models                                              | Notetaker → Summary → Notes options  | Possible PR |
 
 ## Known limits of the upstream app
 

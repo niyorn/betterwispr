@@ -29,6 +29,27 @@ public enum MeetingNotesError: LocalizedError {
     }
 }
 
+extension AppSettings {
+    /// Lays a meeting's own notes language and instructions over the ones chosen in Models.
+    public func applyingNotesOptions(of meeting: Meeting) -> AppSettings {
+        var settings = self
+        if let language = meeting.notesLanguage { settings.notesLanguage = language }
+        let own = (meeting.notesInstructions ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !own.isEmpty else { return settings }
+        let general = notesInstructions.trimmingCharacters(in: .whitespacesAndNewlines)
+        if meeting.replacesNotesPrompt == true {
+            settings.notesInstructions = own
+            settings.notesInstructionsMode = .replace
+        } else if general.isEmpty {
+            settings.notesInstructions = own
+            settings.notesInstructionsMode = .append
+        } else {
+            settings.notesInstructions = "\(general)\n\n\(own)"
+        }
+        return settings
+    }
+}
+
 public enum MeetingNotesGenerator {
     // ponytail: characters at ~4 per token; switch to SystemLanguageModel.tokenCount(for:) once the minimum OS reaches 26.4.
     static let budget = 6000

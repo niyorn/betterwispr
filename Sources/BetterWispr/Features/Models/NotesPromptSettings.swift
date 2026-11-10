@@ -5,7 +5,7 @@ struct NotesPromptSettings: View {
     @Bindable var model: AppModel
     @State private var draft = ""
 
-    private static let languages = ["nl", "en", "de", "fr", "es", "it", "pt"]
+    static let languages = ["nl", "en", "de", "fr", "es", "it", "pt"]
 
     var body: some View {
         Picker("Notes language", selection: setting(\.notesLanguage)) {
@@ -52,7 +52,7 @@ struct NotesPromptSettings: View {
         }
     }
 
-    private static func name(of code: String) -> String {
+    static func name(of code: String) -> String {
         let english = Locale(identifier: "en").localizedString(forLanguageCode: code) ?? code
         let native = Locale(identifier: code).localizedString(forLanguageCode: code) ?? english
         return english == native ? english : "\(english) · \(native)"

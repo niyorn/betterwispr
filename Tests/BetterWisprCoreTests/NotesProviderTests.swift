@@ -541,3 +541,29 @@ private final class NotesEndpointStub: URLProtocol, @unchecked Sendable {
     let loaded = try JSONDecoder().decode(AppSettings.self, from: JSONSerialization.data(withJSONObject: saved))
     #expect(loaded.notesInstructionsMode == .append)
 }
+
+@Test func aMeetingsOwnNotesOptionsLayOverTheOnesFromModels() {
+    var general = AppSettings()
+    general.notesLanguage = "en"
+    var meeting = Meeting(modelName: "Parakeet", language: "nl")
+    #expect(general.applyingNotesOptions(of: meeting) == general)
+
+    meeting.notesLanguage = "nl"
+    meeting.notesInstructions = " Name every customer. "
+    var applied = general.applyingNotesOptions(of: meeting)
+    #expect(applied.notesLanguage == "nl")
+    #expect(applied.notesInstructions == "Name every customer." && applied.notesInstructionsMode == .append)
+
+    general.notesInstructions = "Use short bullets."
+    general.notesInstructionsMode = .replace
+    applied = general.applyingNotesOptions(of: meeting)
+    #expect(applied.notesInstructions == "Use short bullets.\n\nName every customer." && applied.notesInstructionsMode == .replace)
+
+    general.notesInstructions = "   "
+    applied = general.applyingNotesOptions(of: meeting)
+    #expect(applied.notesInstructions == "Name every customer." && applied.notesInstructionsMode == .append)
+
+    meeting.replacesNotesPrompt = true
+    applied = general.applyingNotesOptions(of: meeting)
+    #expect(applied.notesInstructions == "Name every customer." && applied.notesInstructionsMode == .replace)
+}

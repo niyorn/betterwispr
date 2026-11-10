@@ -299,6 +299,8 @@ struct MeetingDetailView: View {
                             .font(.callout).foregroundStyle(.secondary)
                     }
                     Spacer(minLength: 0)
+                    MeetingNotesOptionsButton(meetings: meetings, id: id)
+                        .disabled(isActive)
                     Button("Update summary") { meetings.generateNotes(id) }
                         .disabled(isActive || meetings.notesAvailability != .available)
                         .help("Combine the full transcript and your current thoughts using \(meetings.notesSettings.notesModelName)")
@@ -379,11 +381,15 @@ struct MeetingDetailView: View {
                 .pickerStyle(.menu)
                 .fixedSize()
                 .disabled(!meetings.runs.isEmpty)
-            Button { meetings.generateNotes(id) } label: {
-                Label("Generate summary", systemImage: "sparkles")
+            HStack {
+                Button { meetings.generateNotes(id) } label: {
+                    Label("Generate summary", systemImage: "sparkles")
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(unavailable != nil || isActive)
+                MeetingNotesOptionsButton(meetings: meetings, id: id)
+                    .disabled(isActive)
             }
-            .buttonStyle(.borderedProminent)
-            .disabled(unavailable != nil || isActive)
             if let unavailable { Text(unavailable).font(.callout).foregroundStyle(.secondary) }
         }
         .padding(20)

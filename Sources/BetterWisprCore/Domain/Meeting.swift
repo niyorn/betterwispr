@@ -91,6 +91,11 @@ public struct Meeting: Codable, Identifiable, Equatable, Sendable {
     public var eventID: String?
     /// Questions asked about this meeting alone and their answers, oldest first.
     public var askThread: [AskExchange]?
+    /// Overrides the notes language from Models for this meeting only.
+    public var notesLanguage: String?
+    public var notesInstructions: String?
+    /// Uses `notesInstructions` as the whole prompt instead of adding them to the one from Models.
+    public var replacesNotesPrompt: Bool?
 
     public init(id: UUID = UUID(), title: String = "", createdAt: Date = .now, duration: TimeInterval = 0, notes: String = "",
                 summary: MeetingSummary? = nil, segments: [MeetingSegment] = [], modelName: String, language: String) {
