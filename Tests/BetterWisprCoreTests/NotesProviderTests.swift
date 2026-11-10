@@ -516,3 +516,28 @@ private final class NotesEndpointStub: URLProtocol, @unchecked Sendable {
         Task { await NotesEndpointStub.probe.stop(url) }
     }
 }
+
+@Test func notesPromptAddsOrReplacesTheUserInstructionsAndEndsWithTheNotesLanguage() throws {
+    let builtIn = MeetingNotesGenerator.defaultInstructions
+    var settings = AppSettings()
+    let plain = MeetingNotesGenerator.instructions(settings, meetingLanguage: "nl")
+    #expect(plain.hasPrefix(builtIn) && plain.hasSuffix("in Dutch, whatever language the transcript is in."))
+
+    settings.notesInstructions = "  Use short bullets.  "
+    let added = MeetingNotesGenerator.instructions(settings, meetingLanguage: "auto")
+    #expect(added.hasPrefix("\(builtIn)\n\nUse short bullets.\n\n"))
+    #expect(added.hasSuffix("in the language most of the transcript is spoken in."))
+
+    settings.notesInstructionsMode = .replace
+    settings.notesLanguage = "en"
+    let replaced = MeetingNotesGenerator.instructions(settings, meetingLanguage: "nl")
+    #expect(replaced.hasPrefix("Use short bullets.\n\n") && !replaced.contains(builtIn) && replaced.contains("in English"))
+
+    settings.notesInstructions = " \n "
+    #expect(MeetingNotesGenerator.instructions(settings, meetingLanguage: nil).hasPrefix(builtIn))
+
+    var saved = try #require(try JSONSerialization.jsonObject(with: JSONEncoder().encode(AppSettings())) as? [String: Any])
+    saved["notesInstructionsMode"] = "somethingNewer"
+    let loaded = try JSONDecoder().decode(AppSettings.self, from: JSONSerialization.data(withJSONObject: saved))
+    #expect(loaded.notesInstructionsMode == .append)
+}

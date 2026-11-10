@@ -91,6 +91,13 @@ struct ModelsView: View {
             }
 
             Section {
+                NotesPromptSettings(model: model)
+                    .disabled(!model.canEditConnections)
+            } header: {
+                Text("Meeting notes · Language and prompt")
+            }
+
+            Section {
                 if model.speakerDetectionInstalled {
                     Label("Speaker detection is on. After each meeting, BetterWispr tells the voices on the call apart on this Mac and labels them Speaker 1, Speaker 2 and so on. Rename them above the transcript.", systemImage: "checkmark.circle")
                         .foregroundStyle(.secondary)

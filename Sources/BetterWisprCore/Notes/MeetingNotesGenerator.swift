@@ -63,15 +63,36 @@ public enum MeetingNotesGenerator {
     }
 
     /// Uses only the explicitly selected notes provider. Speech recognition remains independent.
-    public static func generate(segments: [MeetingSegment], names: [Int: String]? = nil, userNotes: String, invite: String = "", settings: AppSettings,
-                                onStep: @escaping @MainActor @Sendable (Int, Int) -> Void) async throws -> GeneratedMeetingNotes {
+    public static func generate(segments: [MeetingSegment], names: [Int: String]? = nil, userNotes: String, invite: String = "", language: String? = nil,
+                                settings: AppSettings, onStep: @escaping @MainActor @Sendable (Int, Int) -> Void) async throws -> GeneratedMeetingNotes {
         let notes = userNotes.trimmingCharacters(in: .whitespacesAndNewlines)
         let spoken = MeetingTranscript.removingEchoes(from: segments).filter { !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
         guard !spoken.isEmpty || !notes.isEmpty else { throw MeetingNotesError.nothingToSummarize }
         if case .unavailable(let message) = availability(settings: settings) { throw MeetingNotesError.unavailable(message) }
         let room = budget(for: settings.notesSelection)
         return try await NotesWriter.write(parts: TranscriptChunker.chunks(spoken, names: names, budget: room), notes: notes, invite: invite,
-                                           model: try meetingNotesModel(settings), budget: room, onStep: onStep)
+                                           model: try meetingNotesModel(settings, instructions: instructions(settings, meetingLanguage: language)),
+                                           budget: room, onStep: onStep)
+    }
+
+    public static var defaultInstructions: String { NotesWriter.instructions }
+
+    /// Builds the notes prompt from the user's instructions and the chosen output language; an empty replacement keeps the built-in prompt.
+    static func instructions(_ settings: AppSettings, meetingLanguage: String?) -> String {
+        let custom = settings.notesInstructions.trimmingCharacters(in: .whitespacesAndNewlines)
+        let base = switch (settings.notesInstructionsMode, custom.isEmpty) {
+        case (_, true): NotesWriter.instructions
+        case (.append, false): "\(NotesWriter.instructions)\n\n\(custom)"
+        case (.replace, false): custom
+        }
+        return "\(base)\n\n\(languageInstruction(settings.notesLanguage ?? meetingLanguage))"
+    }
+
+    static func languageInstruction(_ code: String?) -> String {
+        guard let code, code != "auto", let name = Locale(identifier: "en").localizedString(forLanguageCode: code) else {
+            return "Write every field in the language most of the transcript is spoken in."
+        }
+        return "Write every field in \(name), whatever language the transcript is in."
     }
 
     private static var appleAvailability: NotesAvailability {
@@ -90,8 +111,8 @@ public enum MeetingNotesGenerator {
     }
 
     /// The only route that may use Claude Code's non-subscription sign-ins; every other caller stays on `languageModel`.
-    static func meetingNotesModel(_ settings: AppSettings) throws -> any NotesLanguageModel {
-        let model = try languageModel(settings)
+    static func meetingNotesModel(_ settings: AppSettings, instructions: String = NotesWriter.instructions) throws -> any NotesLanguageModel {
+        let model = try languageModel(settings, instructions: instructions)
         guard var route = model as? CLINotesModel else { return model }
         route.anySignIn = settings.allowsAnySignIn(route.cli)
         route.confirmedDestination = settings.claudeCodeConfirmedDestination

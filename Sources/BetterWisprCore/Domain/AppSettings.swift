@@ -71,6 +71,11 @@ public struct RetentionClock: Codable, Equatable, Sendable {
     }
 }
 
+/// Decides whether the user's notes instructions extend or replace the built-in notes prompt.
+public enum NotesInstructionsMode: String, Codable, CaseIterable, Sendable {
+    case append, replace
+}
+
 public struct AppSettings: Codable, Equatable, Sendable {
     public var selectedModelID: String = "apple"
     public var speechConnections: [SpeechConnection] = []
@@ -159,6 +164,10 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var askSelection: NotesModelSelection?
     public var cleanupSelection: NotesModelSelection?
     public var notesBuiltIn: Bool = false
+    /// Nil writes meeting notes in the language the meeting was recorded in.
+    public var notesLanguage: String?
+    public var notesInstructions: String = ""
+    public var notesInstructionsMode: NotesInstructionsMode = .append
     /// The newest onboarding the user finished or skipped; 0 shows it again.
     public var completedOnboardingVersion: Int = 0
     /// The onboarding page to resume after quitting midway.
@@ -291,6 +300,9 @@ public struct AppSettings: Codable, Equatable, Sendable {
         askSelection = try? container.decodeIfPresent(NotesModelSelection.self, forKey: .askSelection)
         cleanupSelection = try? container.decodeIfPresent(NotesModelSelection.self, forKey: .cleanupSelection)
         notesBuiltIn = try container.decodeIfPresent(Bool.self, forKey: .notesBuiltIn) ?? false
+        notesLanguage = try? container.decodeIfPresent(String.self, forKey: .notesLanguage)
+        notesInstructions = (try? container.decodeIfPresent(String.self, forKey: .notesInstructions)) ?? ""
+        notesInstructionsMode = (try? container.decodeIfPresent(NotesInstructionsMode.self, forKey: .notesInstructionsMode)) ?? .append
         completedOnboardingVersion = try container.decodeIfPresent(Int.self, forKey: .completedOnboardingVersion) ?? 0
         onboardingStep = try container.decodeIfPresent(Int.self, forKey: .onboardingStep) ?? 0
     }
