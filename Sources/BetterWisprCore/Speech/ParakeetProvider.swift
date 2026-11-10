@@ -27,6 +27,9 @@ public final class ParakeetProvider: SpeechProvider {
 
     nonisolated static let phraseBoosterMegabytes = 100.0
 
+    /// Lists the dictation languages the English phrase booster runs for; Dutch speech is full of English terms.
+    nonisolated static let boostedLanguages: Set<Language> = [.english, .dutch]
+
     nonisolated static func source(for model: SpeechModel) -> (version: AsrModelVersion, repo: Repo, megabytes: Double)? {
         guard model.engine == .parakeet else { return nil }
         return switch model.modelName {
@@ -226,7 +229,7 @@ public final class ParakeetProvider: SpeechProvider {
         guard audioURL.isFileURL, FileManager.default.fileExists(atPath: audioURL.path) else { throw SpeechError.audioUnavailable }
         try Task.checkCancellation()
         let hint = Self.hint(for: language)
-        let terms = loadedVersion != .tdtJa && (hint == nil || hint == .english) ? Self.boostingTerms(vocabulary + screenTerms) : []
+        let terms = loadedVersion != .tdtJa && (hint.map(Self.boostedLanguages.contains) ?? true) ? Self.boostingTerms(vocabulary + screenTerms) : []
         vocabularyFixes = 0
         let task = Task {
             let text: String
@@ -290,7 +293,7 @@ public final class ParakeetProvider: SpeechProvider {
         var state = TdtDecoderState.make(decoderLayers: await manager.decoderLayerCount)
         let result = try await manager.transcribe(samples, decoderState: &state, language: language)
         try Task.checkCancellation()
-        let misspelled = await MainActor.run { !isSpelledCorrectly(result.text) }
+        let misspelled = await MainActor.run { !isSpelledCorrectly(result.text, in: language) }
         guard language != nil || TranscriptCleaner.isEnglish(result.text, language: nil),
               misspelled || !vocabulary.isEmpty,
               let rescored = await session.rescore(text: result.text, tokenTimings: result.tokenTimings ?? [], audioSamples: samples),
@@ -298,7 +301,7 @@ public final class ParakeetProvider: SpeechProvider {
         let candidates = rescored.replacements.compactMap { item in
             item.shouldReplace ? item.replacementWord.map { (original: item.originalWord, replacement: $0) } : nil
         }
-        let spelling = await MainActor.run { candidates.map { isSpelledCorrectly($0.original) } }
+        let spelling = await MainActor.run { candidates.map { isSpelledCorrectly($0.original, in: language) } }
         let (replacements, fixes) = judging(candidates, spelledCorrectly: spelling, vocabulary: vocabulary)
         let text = restoringPunctuation(original: result.text, rescored: rescored.text, replacements: replacements)
         return (text, text == result.text ? 0 : fixes)
@@ -320,7 +323,15 @@ public final class ParakeetProvider: SpeechProvider {
 
     @MainActor
     static func isSpelledCorrectly(_ words: String) -> Bool {
-        NSSpellChecker.shared.checkSpelling(of: words, startingAt: 0, language: "en", wrap: false, inSpellDocumentWithTag: 0, wordCount: nil).location == NSNotFound
+        isSpelledCorrectly(words, in: nil)
+    }
+
+    /// Accepts Dutch dictation spelled right in Dutch or English, since it is full of English terms.
+    @MainActor
+    static func isSpelledCorrectly(_ words: String, in language: Language?) -> Bool {
+        (language == .dutch ? ["nl", "en"] : ["en"]).contains {
+            NSSpellChecker.shared.checkSpelling(of: words, startingAt: 0, language: $0, wrap: false, inSpellDocumentWithTag: 0, wordCount: nil).location == NSNotFound
+        }
     }
 }
 
