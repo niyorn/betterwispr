@@ -85,17 +85,25 @@ A new certificate means granting Accessibility to `BetterWispr Dev` once more.
 
 ## What `local` changes
 
-| Change                                                                                                                   | Where                                | Upstream?                     |
-| ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------ | ----------------------------- |
-| History in a `List`, so leaving it no longer freezes                                                                     | Upstream PR #87, merged in           | Drop the merge once #87 lands |
-| Notes and Ask send API and CLI models the whole meeting in one request (200,000 characters); on-device models keep 6,000 | `MeetingNotesGenerator.budget(for:)` | Good PR candidate             |
-| Dev variant: `AppPaths`, `BETTERWISPR_VARIANT`, `install-dev.sh`                                                         | see above                            | Fork only                     |
+| Change                                                                                                                   | Where                                | Upstream?                             |
+| ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------ | ------------------------------------- |
+| History in a `List`, so leaving it no longer freezes                                                                     | Upstream PR #87, merged in           | Drop the merge once #87 lands         |
+| Notes and Ask send API and CLI models the whole meeting in one request (200,000 characters); on-device models keep 6,000 | `MeetingNotesGenerator.budget(for:)` | Good PR candidate                     |
+| Dev variant: `AppPaths`, `BETTERWISPR_VARIANT`, `install-dev.sh`                                                         | see above                            | Fork only                             |
+| OpenRouter provider order per model, which wins over the low-latency `sort`                                              | `APINotesModel.openRouterProviders`  | Fork only                             |
+| Parakeet phrase booster also for Dutch, spell-checked in Dutch and English                                               | `ParakeetProvider.boostedLanguages`  | Possible PR, after real-voice testing |
 
 ## Known limits of the upstream app
 
-- Vocabulary hints reach Parakeet only for English or automatic language; with Dutch set, a
-  vocabulary entry works as find-and-replace after recognition only.
+- Upstream runs the Parakeet phrase booster only for English or automatic language, and with
+  automatic language only when the text comes out English. On `local` it also runs for Dutch,
+  with spelling checked in Dutch and English. Measured on 8 sentences of the macOS Dutch voice
+  full of terms, it fixed 3 of 13 misheard terms; 8 plain Dutch sentences came out unchanged
+  apart from one vocabulary hit (`Marten` → `Maarten`). Its model is English-only, so a misheard
+  term that is itself a real word (`dit` for Git, `Egel` for Egle) stays.
 - Learned corrections are checked by a model only for English text with Medium cleanup;
   otherwise rules alone decide, and their common-word list is English.
-- The OpenRouter notes connection cannot set a provider order; use an OpenRouter preset
-  (`@preset/<name>`) as the model ID for that.
+- Upstream's OpenRouter notes connection cannot set a provider order. On `local`,
+  `APINotesModel.openRouterProviders` pins one per model and replaces the low-latency
+  `sort: throughput`; keep it in step with Waan's `src/config/models.js` after a
+  `npm run check:cache` run there. A model missing from the list lets OpenRouter choose.
