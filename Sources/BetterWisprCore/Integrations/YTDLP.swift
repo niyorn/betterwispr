@@ -41,7 +41,7 @@ public enum YTDLP {
     static let progressMark = "betterwispr-progress"
 
     /// BetterWispr's own copy, installed only by an explicit action.
-    public static var installed: URL { URL.applicationSupportDirectory.appending(path: "BetterWispr/Tools/yt-dlp") }
+    public static var installed: URL { AppPaths.support.appending(path: "Tools/yt-dlp") }
 
     public static var executable: URL? {
         FileManager.default.isExecutableFile(atPath: installed.path) ? installed : find("yt-dlp")

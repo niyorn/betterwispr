@@ -17,6 +17,13 @@ cp "$binary_dir/BetterWispr" "$app/Contents/MacOS/BetterWispr"
 cp Resources/Info.plist "$app/Contents/Info.plist"
 version="$(tr -d '[:space:]' < VERSION)"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $version" -c "Set :CFBundleVersion $version" "$app/Contents/Info.plist"
+# A dev build gets its own identity and data folder, so it runs beside the installed app.
+if [[ "${BETTERWISPR_VARIANT:-}" == dev ]]; then
+    /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier org.betterwispr.app.dev" \
+        -c "Set :CFBundleName 'BetterWispr Dev'" -c "Set :CFBundleDisplayName 'BetterWispr Dev'" \
+        -c "Add :BetterWisprDataFolder string 'BetterWispr Dev'" -c "Add :SUEnableAutomaticChecks bool false" \
+        "$app/Contents/Info.plist"
+fi
 icon_sources=(Sources/BetterWispr/Design/BrandMark.swift scripts/render-app-icon.swift)
 icon=.build/AppIcon.icns
 if [[ ! -f "$icon" || "${icon_sources[0]}" -nt "$icon" || "${icon_sources[1]}" -nt "$icon" ]]; then

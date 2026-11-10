@@ -13,7 +13,7 @@ public struct LocalStore: Sendable {
     public var stateURL: URL { directory.appendingPathComponent("workspace.json") }
 
     public init(directory: URL? = nil) {
-        self.directory = directory ?? URL.applicationSupportDirectory.appendingPathComponent("BetterWispr", isDirectory: true)
+        self.directory = directory ?? AppPaths.support
     }
 
     public func load() throws -> SavedState {

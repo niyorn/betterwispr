@@ -28,7 +28,7 @@ final class TranscriptionModel {
     @ObservationIgnored private var provider: (any SpeechProvider)?
 
     init(store: MeetingStore? = nil) {
-        self.store = store ?? MeetingStore(directory: URL.applicationSupportDirectory.appending(path: "BetterWispr/Transcriptions"))
+        self.store = store ?? MeetingStore(directory: AppPaths.support.appending(path: "Transcriptions"))
         if store == nil { Self.removeLeftovers() }
         let loaded = self.store.load()
         transcripts = loaded.meetings

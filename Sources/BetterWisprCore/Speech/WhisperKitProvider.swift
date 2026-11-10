@@ -9,7 +9,7 @@ public final class WhisperKitProvider: SpeechProvider {
     /// Language codes automatic detection chooses from; empty allows every language the model knows.
     public var detectionLanguages: Set<String> = []
     public nonisolated static var defaultModelsDirectory: URL {
-        URL.applicationSupportDirectory.appending(path: "BetterWispr/Models", directoryHint: .isDirectory)
+        AppPaths.support.appending(path: "Models", directoryHint: .isDirectory)
     }
     private let modelsDirectory: URL
     private var runtime: WhisperKit?

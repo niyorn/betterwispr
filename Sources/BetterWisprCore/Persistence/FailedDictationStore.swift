@@ -19,8 +19,7 @@ public struct FailedDictationStore: Sendable {
     public let directory: URL
 
     public init(directory: URL? = nil) {
-        self.directory = directory ?? URL.applicationSupportDirectory
-            .appendingPathComponent("BetterWispr/Failed Dictations", isDirectory: true)
+        self.directory = directory ?? AppPaths.support.appendingPathComponent("Failed Dictations", isDirectory: true)
     }
 
     /// Copies the recording in and returns where it was kept, then removes the oldest beyond the limits.

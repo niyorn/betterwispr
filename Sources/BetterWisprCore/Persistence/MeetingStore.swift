@@ -4,9 +4,7 @@ public struct MeetingStore: Sendable {
     public let directory: URL
 
     public init(directory: URL? = nil) {
-        self.directory = directory ?? URL.applicationSupportDirectory
-            .appendingPathComponent("BetterWispr", isDirectory: true)
-            .appendingPathComponent("Meetings", isDirectory: true)
+        self.directory = directory ?? AppPaths.support.appendingPathComponent("Meetings", isDirectory: true)
     }
 
     private struct File: Codable {

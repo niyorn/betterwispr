@@ -18,7 +18,7 @@ public struct VoiceStore: Sendable {
     public let url: URL
 
     public init(url: URL? = nil) {
-        self.url = url ?? URL.applicationSupportDirectory.appendingPathComponent("BetterWispr/Voices.json")
+        self.url = url ?? AppPaths.support.appendingPathComponent("Voices.json")
     }
 
     private struct File: Codable {
