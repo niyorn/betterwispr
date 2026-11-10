@@ -165,6 +165,14 @@ func standaloneModifiersRoundTripThroughSettings(keyCode: UInt32) throws {
     #expect(TranscriptCleaner.clean("and uh uh we can build um the export", language: "en") == "and we can build the export")
 }
 
+@Test func cleanerDropsDutchFillersButKeepsTheDutchWordEr() {
+    #expect(TranscriptCleaner.clean("Ik heb eh de branch ehm naar develop gezet", language: "nl")
+            == "Ik heb de branch naar develop gezet")
+    #expect(TranscriptCleaner.clean("euh kun je er even naar kijken?", language: "nl") == "Kun je er even naar kijken?")
+    #expect(TranscriptCleaner.clean("Er staat eh een fout in.", language: "nl") == "Er staat een fout in.")
+    #expect(TranscriptCleaner.clean("Il y a euh un problème", language: "fr") == "Il y a euh un problème")
+}
+
 @Test func cleanerCapitalizesAfterSentenceInitialFiller() {
     #expect(TranscriptCleaner.clean("Can you check the logs? um yes, and the tests too.", language: "en")
             == "Can you check the logs? Yes, and the tests too.")

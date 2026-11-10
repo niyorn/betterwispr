@@ -8,6 +8,8 @@ public enum TranscriptCleaner {
     }
 
     private static let fillers: Set<String> = ["uh", "uhh", "uhm", "um", "umm", "er", "erm", "hm", "hmm", "mm", "mmm"]
+    /// Leaves out "er", which is an everyday Dutch word.
+    private static let dutchFillers: Set<String> = ["eh", "ehm", "euh", "uh", "uhm", "um", "hm", "hmm", "mm", "mmm"]
     private static let keptDoubles: Set<String> = ["that", "had", "is", "very", "really", "long", "bye", "no", "ha"]
     private static let numberWords: Set<String> = [
         "zero", "oh", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
@@ -24,15 +26,21 @@ public enum TranscriptCleaner {
     private static let terminators = sentenceEnders.union(["…"])
     private static let clauseBreaks = terminators.union([","])
 
-    /// Removes English filled pauses, set-off "you know" and unpunctuated stutters; other languages are only trimmed.
+    /// Removes English filled pauses, set-off "you know" and unpunctuated stutters, and Dutch filled pauses; other languages are only trimmed.
     public static func clean(_ text: String, language: String?) -> String {
         let ranges = text.ranges(of: /[\p{L}\p{M}\p{N}_'’-]+/)
         let ends = ranges.dropFirst().map(\.lowerBound) + [text.endIndex]
         let tokens = zip(ranges, ends).map { Token(word: String(text[$0]), trailing: String(text[$0.upperBound..<$1])) }
         let spoken = tokens.map(\.word).filter { !fillers.contains($0.lowercased()) }.joined(separator: " ")
-        guard isEnglish(spoken, language: language) else { return text.trimmingCharacters(in: .whitespacesAndNewlines) }
         let leading = text[..<(ranges.first?.lowerBound ?? text.endIndex)]
-        let rebuilt = String(leading) + destutter(dropRepairs(dropFillers(tokens))).map { $0.word + $0.trailing }.joined()
+        let rebuilt: String
+        if isEnglish(spoken, language: language) {
+            rebuilt = String(leading) + destutter(dropRepairs(dropFillers(tokens))).map { $0.word + $0.trailing }.joined()
+        } else if isDutch(text, language: language) {
+            rebuilt = String(leading) + dropFillers(tokens, fillers: dutchFillers).map { $0.word + $0.trailing }.joined()
+        } else {
+            return text.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
         var result = rebuilt.replacing(/\ {2,}/, with: " ").trimmingCharacters(in: .whitespacesAndNewlines)
         if result.hasSuffix(",") { result.removeLast() }
         return result.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -45,13 +53,19 @@ public enum TranscriptCleaner {
         return code == nil || code == "en"
     }
 
-    private static func dropFillers(_ tokens: [Token]) -> [Token] {
+    private static func isDutch(_ text: String, language: String?) -> Bool {
+        let code = language.map { Locale(identifier: $0).language.languageCode?.identifier }
+            ?? NLLanguageRecognizer.dominantLanguage(for: text)?.rawValue
+        return code == "nl"
+    }
+
+    private static func dropFillers(_ tokens: [Token], fillers: Set<String> = fillers) -> [Token] {
         var kept: [Token] = []
         var capitalizeNext = false
         var tokensToSkip = 0
         for (index, var token) in tokens.enumerated() {
             if tokensToSkip > 0 { tokensToSkip -= 1; continue }
-            let removedCount = fillerLength(tokens, at: index, after: kept.last?.trailing)
+            let removedCount = fillerLength(tokens, at: index, after: kept.last?.trailing, fillers: fillers)
             if removedCount > 0 {
                 tokensToSkip = removedCount - 1
                 let removedTrailing = tokens[index + tokensToSkip].trailing
@@ -73,7 +87,7 @@ public enum TranscriptCleaner {
         return kept
     }
 
-    private static func fillerLength(_ tokens: [Token], at index: Int, after previous: String?) -> Int {
+    private static func fillerLength(_ tokens: [Token], at index: Int, after previous: String?, fillers: Set<String>) -> Int {
         let word = tokens[index].word.lowercased()
         let followsNumber = index > 0 && tokens[index - 1].word.allSatisfy(\.isNumber)
         if fillers.contains(word), !(word == "mm" && followsNumber) { return 1 }
